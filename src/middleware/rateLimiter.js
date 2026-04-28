@@ -11,7 +11,11 @@ const authLimiter = rateLimit({
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60,
-  keyGenerator: (req) => req.user?.id || req.ip,
+  keyGenerator: (req) => {
+    if (req.user?.id) return req.user.id;
+
+    return rateLimit.ipKeyGenerator(req);
+  },
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => res.status(429).json({ status: 'error', message: 'Too many requests, please try again later' }),
