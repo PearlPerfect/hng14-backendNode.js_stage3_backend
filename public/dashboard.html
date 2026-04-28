@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Insighta Labs — Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0c0e10; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
+  nav  { background: #131619; border-bottom: 1px solid #252a30; padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; }
+  nav h1 { color: #00e5a0; font-size: 18px; font-weight: 800; }
+  nav div { display: flex; gap: 16px; align-items: center; font-size: 14px; }
+  nav span { color: #64748b; }
+  nav button { background: #f43f5e; border: none; color: #fff; padding: 7px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 40px; }
+  .stat { background: #131619; border: 1px solid #252a30; border-radius: 8px; padding: 20px; }
+  .stat .val { font-size: 32px; font-weight: 800; color: #00e5a0; }
+  .stat .lbl { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .section-title { font-size: 11px; color: #64748b; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #252a30; }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .filters input, .filters select { background: #131619; border: 1px solid #252a30; color: #e2e8f0; font-size: 13px; padding: 8px 12px; border-radius: 6px; outline: none; }
+  .filters input:focus, .filters select:focus { border-color: #00e5a0; }
+  .filters button { background: #00e5a0; border: none; color: #000; font-weight: 600; font-size: 13px; padding: 8px 18px; border-radius: 6px; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th    { text-align: left; padding: 10px 12px; background: #131619; color: #64748b; border-bottom: 1px solid #252a30; }
+  td    { padding: 10px 12px; border-bottom: 1px solid #1a1e24; }
+  tr:hover td { background: #131619; }
+  .pagination { display: flex; align-items: center; gap: 10px; margin-top: 20px; font-size: 13px; color: #64748b; }
+  .pagination button { background: #131619; border: 1px solid #252a30; color: #e2e8f0; padding: 6px 14px; border-radius: 5px; cursor: pointer; }
+  .pagination button:disabled { opacity: .4; cursor: not-allowed; }
+  .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+  .search-bar input { flex: 1; background: #131619; border: 1px solid #252a30; color: #e2e8f0; font-size: 14px; padding: 10px 14px; border-radius: 6px; outline: none; }
+  .search-bar input:focus { border-color: #a78bfa; }
+  .search-bar button { background: #a78bfa; border: none; color: #000; font-weight: 600; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 24px; }
+  .tab { padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid #252a30; background: transparent; color: #64748b; }
+  .tab.active { background: #00e5a0; color: #000; border-color: #00e5a0; font-weight: 600; }
+  .hidden { display: none; }
+  #msg { font-size: 13px; color: #64748b; padding: 20px 0; }
+</style>
+</head>
+<body>
+<nav>
+  <h1>Insighta Labs+</h1>
+  <div>
+    <span id="nav-user">Loading...</span>
+    <button onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="stats" id="stats">
+    <div class="stat"><div class="val" id="s-total">—</div><div class="lbl">Total Profiles</div></div>
+    <div class="stat"><div class="val" id="s-male">—</div><div class="lbl">Male</div></div>
+    <div class="stat"><div class="val" id="s-female">—</div><div class="lbl">Female</div></div>
+    <div class="stat"><div class="val" id="s-adult">—</div><div class="lbl">Adults</div></div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('browse')">Browse</button>
+    <button class="tab" onclick="showTab('search')">Natural Language Search</button>
+  </div>
+
+  <!-- Browse tab -->
+  <div id="tab-browse">
+    <div class="section-title">Profiles</div>
+    <div class="filters">
+      <select id="f-gender"><option value="">Any gender</option><option>male</option><option>female</option></select>
+      <select id="f-agegroup"><option value="">Any age group</option><option>child</option><option>teenager</option><option>adult</option><option>senior</option></select>
+      <input type="text" id="f-country" placeholder="Country (NG, GH…)" style="width:140px"/>
+      <input type="number" id="f-minage" placeholder="Min age" style="width:90px"/>
+      <input type="number" id="f-maxage" placeholder="Max age" style="width:90px"/>
+      <select id="f-sortby"><option value="">Sort by…</option><option value="age">Age</option><option value="created_at">Created</option><option value="gender_probability">Gender prob.</option></select>
+      <select id="f-order"><option value="asc">Asc</option><option value="desc">Desc</option></select>
+      <button onclick="loadProfiles(1)">Apply</button>
+    </div>
+    <div id="profiles-wrap">
+      <table id="profiles-table" class="hidden">
+        <thead><tr><th>Name</th><th>Gender</th><th>Age</th><th>Age Group</th><th>Country</th><th>Country Name</th></tr></thead>
+        <tbody id="profiles-body"></tbody>
+      </table>
+      <div id="msg">Loading...</div>
+    </div>
+    <div class="pagination">
+      <button id="prev-btn" onclick="changePage(-1)">← Prev</button>
+      <span id="page-info"></span>
+      <button id="next-btn" onclick="changePage(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Search tab -->
+  <div id="tab-search" class="hidden">
+    <div class="section-title">Natural Language Search</div>
+    <div class="search-bar">
+      <input type="text" id="nlp-input" placeholder="e.g. young males from nigeria, females above 30…" onkeydown="if(event.key==='Enter')runSearch()"/>
+      <button onclick="runSearch()">Search</button>
+    </div>
+    <div id="search-wrap"></div>
+  </div>
+</div>
+
+<script>
+let currentPage = 1, totalPages = 1;
+
+async function apiFetch(path, params = {}) {
+  const qs  = new URLSearchParams(Object.entries(params).filter(([,v]) => v !== '' && v !== null && v !== undefined));
+  const url = `${path}${qs.toString() ? '?' + qs : ''}`;
+  const res = await fetch(url, { headers: { 'X-API-Version': '1' }, credentials: 'include' });
+  if (res.status === 401) { window.location.href = '/login'; return null; }
+  return res.json();
+}
+
+async function loadUser() {
+  const res = await apiFetch('/auth/me');
+  if (res?.data) document.getElementById('nav-user').textContent = `@${res.data.username} (${res.data.role})`;
+}
+
+async function loadStats() {
+  const res = await apiFetch('/api/profiles', { limit: 1 });
+  if (!res) return;
+  document.getElementById('s-total').textContent = res.total ?? '—';
+
+  const [male, female, adult] = await Promise.all([
+    apiFetch('/api/profiles', { gender: 'male', limit: 1 }),
+    apiFetch('/api/profiles', { gender: 'female', limit: 1 }),
+    apiFetch('/api/profiles', { age_group: 'adult', limit: 1 }),
+  ]);
+  document.getElementById('s-male').textContent   = male?.total   ?? '—';
+  document.getElementById('s-female').textContent = female?.total ?? '—';
+  document.getElementById('s-adult').textContent  = adult?.total  ?? '—';
+}
+
+async function loadProfiles(page = 1) {
+  currentPage = page;
+  document.getElementById('msg').textContent = 'Loading...';
+  document.getElementById('profiles-table').classList.add('hidden');
+
+  const params = {
+    gender:    document.getElementById('f-gender').value,
+    age_group: document.getElementById('f-agegroup').value,
+    country_id: document.getElementById('f-country').value,
+    min_age:   document.getElementById('f-minage').value,
+    max_age:   document.getElementById('f-maxage').value,
+    sort_by:   document.getElementById('f-sortby').value,
+    order:     document.getElementById('f-order').value,
+    page, limit: 15,
+  };
+
+  const res = await apiFetch('/api/profiles', params);
+  if (!res) return;
+
+  totalPages = res.total_pages || 1;
+  document.getElementById('page-info').textContent = `Page ${res.page} of ${totalPages} · ${res.total} results`;
+  document.getElementById('prev-btn').disabled = page <= 1;
+  document.getElementById('next-btn').disabled = page >= totalPages;
+
+  const tbody = document.getElementById('profiles-body');
+  tbody.innerHTML = '';
+  if (!res.data?.length) { document.getElementById('msg').textContent = 'No profiles found.'; return; }
+
+  res.data.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.name}</td><td>${p.gender}</td><td>${p.age}</td><td>${p.age_group}</td><td>${p.country_id}</td><td>${p.country_name || '—'}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('msg').textContent = '';
+  document.getElementById('profiles-table').classList.remove('hidden');
+}
+
+async function runSearch() {
+  const q = document.getElementById('nlp-input').value.trim();
+  if (!q) return;
+  const wrap = document.getElementById('search-wrap');
+  wrap.innerHTML = '<p style="color:#64748b;font-size:13px">Searching...</p>';
+  const res = await apiFetch('/api/profiles/search', { q, limit: 15 });
+  if (!res) return;
+
+  if (res.status === 'error') { wrap.innerHTML = `<p style="color:#f43f5e;font-size:13px">${res.message}</p>`; return; }
+
+  let html = `<p style="color:#64748b;font-size:13px;margin-bottom:12px">${res.total} result(s)</p><table><thead><tr><th>Name</th><th>Gender</th><th>Age</th><th>Age Group</th><th>Country</th></tr></thead><tbody>`;
+  res.data.forEach(p => { html += `<tr><td>${p.name}</td><td>${p.gender}</td><td>${p.age}</td><td>${p.age_group}</td><td>${p.country_id}</td></tr>`; });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function changePage(delta) { loadProfiles(currentPage + delta); }
+
+function showTab(tab) {
+  document.getElementById('tab-browse').classList.toggle('hidden', tab !== 'browse');
+  document.getElementById('tab-search').classList.toggle('hidden', tab !== 'search');
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i === 0 && tab === 'browse') || (i === 1 && tab === 'search')));
+}
+
+async function logout() {
+  await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+  window.location.href = '/login';
+}
+
+loadUser();
+loadStats();
+loadProfiles(1);
+</script>
+</body>
+</html>
