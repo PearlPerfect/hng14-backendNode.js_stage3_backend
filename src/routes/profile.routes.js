@@ -7,7 +7,7 @@ const { apiLimiter } = require('../middleware/rateLimiter');
 
 const router = Router();
 
-// All profile routes: must be authenticated, rate limited, and carry X-API-Version
+// All profile routes
 router.use(authenticate, apiVersion, apiLimiter);
 
 // Read endpoints — admin and analyst
