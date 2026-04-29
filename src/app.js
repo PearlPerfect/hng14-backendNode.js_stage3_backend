@@ -11,6 +11,7 @@ const profileRoutes = require('./routes/profile.routes');
 const errorHandler  = require('./middleware/errorHandler');
 
 const app = express();
+app.set('trust proxy', 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: [process.env.FRONTEND_URL || 'http://localhost:3000', /localhost/], credentials: true }));
