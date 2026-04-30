@@ -8,9 +8,13 @@ const pendingStates = new Map();
 function githubLogin(req, res) {
   const state = crypto.randomBytes(16).toString('hex');
   // For CLI PKCE flow, code_challenge comes as query param
-  const { code_challenge, code_challenge_method = 'S256' } = req.query;
+  const { code_challenge, code_challenge_method = 'S256', port } = req.query;
 
-  pendingStates.set(state, { code_challenge, created: Date.now() });
+  pendingStates.set(state, { 
+    code_challenge, 
+    port: port || null,  // Store the port for CLI callback
+    created: Date.now() 
+  });
 
   const params = new URLSearchParams({
     client_id:    GITHUB_CLIENT_ID,
@@ -41,8 +45,8 @@ async function githubCallback(req, res, next) {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
     
-    // Check if this is a CLI request (has port parameter)
-    const redirectPort = req.query.port || req.session?.port;
+    // Check if this is a CLI request (has stored port)
+    const redirectPort = stateData.port;
     if (redirectPort) {
       return res.redirect(
         `http://localhost:${redirectPort}/callback?access_token=${accessToken}&refresh_token=${refreshToken}&username=${user.username}`
