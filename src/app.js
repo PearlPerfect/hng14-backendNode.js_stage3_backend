@@ -15,9 +15,34 @@ app.set('trust proxy', 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
 
-// Updated CORS configuration - Allow all origins
-app.use(cors({ 
-  origin: true,  // This allows any origin
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.FRONTEND_URL,
+  /\.vercel\.app$/, 
+  /localhost/
+].filter(Boolean);
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin matches any allowed pattern
+    const isAllowed = allowedOrigins.some(pattern => {
+      if (pattern instanceof RegExp) {
+        return pattern.test(origin);
+      }
+      return pattern === origin;
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('Blocked CORS request from:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-API-Version', 'Cookie'],
@@ -107,12 +132,6 @@ app.use(async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
-
-// Add a middleware to log CORS headers for debugging
-app.use((req, res, next) => {
-  console.log(`[${req.method}] ${req.url} - Origin: ${req.headers.origin}`);
-  next();
 });
 
 app.use('/auth', authRoutes);
