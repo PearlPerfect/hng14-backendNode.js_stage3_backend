@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const authService = require('../services/auth.service');
 const { GITHUB_CLIENT_ID, GITHUB_CALLBACK_URL } = require('../config/auth');
 
-// Temporary in-memory state store (use Redis in production)
 const pendingStates = new Map();
 
 // GET /auth/github — redirect to GitHub
@@ -40,7 +39,9 @@ async function githubCallback(req, res, next) {
     const { accessToken, refreshToken } = authService.issueTokens(user);
     await authService.storeRefreshToken(user.id, refreshToken);
 
-    // CLI flow: redirect back to localhost callback with tokens in query
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    
+    // Check if this is a CLI request (has port parameter)
     const redirectPort = req.query.port || req.session?.port;
     if (redirectPort) {
       return res.redirect(
@@ -48,12 +49,25 @@ async function githubCallback(req, res, next) {
       );
     }
 
-    // Web flow: set HTTP-only cookies
-    res.cookie('access_token',  accessToken,  { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 3 * 60 * 1000 });
-    res.cookie('refresh_token', refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 5 * 60 * 1000 });
-
-    res.redirect('/dashboard');
-  } catch (err) { next(err); }
+    // Web flow — redirect to Next.js portal after setting cookies
+    res.cookie('access_token',  accessToken,  { 
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production', 
+      sameSite: 'lax', 
+      maxAge: 3 * 60 * 1000 
+    });
+    res.cookie('refresh_token', refreshToken, { 
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production', 
+      sameSite: 'lax', 
+      maxAge: 5 * 60 * 1000 
+    });
+    
+    // Redirect to Next.js frontend with tokens in URL for client-side storage
+    res.redirect(`${frontendUrl}/login?access_token=${accessToken}&refresh_token=${refreshToken}&username=${user.username}`);
+  } catch (err) { 
+    next(err); 
+  }
 }
 
 // POST /auth/refresh
@@ -67,12 +81,24 @@ async function refresh(req, res, next) {
 
     // If cookie-based (web), update cookies
     if (req.cookies?.refresh_token) {
-      res.cookie('access_token',  accessToken,  { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 3 * 60 * 1000 });
-      res.cookie('refresh_token', refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 5 * 60 * 1000 });
+      res.cookie('access_token',  accessToken,  { 
+        httpOnly: true, 
+        secure: process.env.NODE_ENV === 'production', 
+        sameSite: 'lax', 
+        maxAge: 3 * 60 * 1000 
+      });
+      res.cookie('refresh_token', refreshToken, { 
+        httpOnly: true, 
+        secure: process.env.NODE_ENV === 'production', 
+        sameSite: 'lax', 
+        maxAge: 5 * 60 * 1000 
+      });
     }
 
     res.json({ status: 'success', access_token: accessToken, refresh_token: refreshToken });
-  } catch (err) { next(err); }
+  } catch (err) { 
+    next(err); 
+  }
 }
 
 // POST /auth/logout
@@ -83,7 +109,9 @@ async function logout(req, res, next) {
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
     res.json({ status: 'success', message: 'Logged out' });
-  } catch (err) { next(err); }
+  } catch (err) { 
+    next(err); 
+  }
 }
 
 // GET /auth/me
