@@ -14,7 +14,30 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: [process.env.FRONTEND_URL || 'http://localhost:3000', /localhost/], credentials: true }));
+
+// CORS Configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:3001',
+].filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (origin && origin.includes('vercel.app')) return callback(null, true);
+    return callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-API-Version', 'Cookie'],
+  exposedHeaders: ['Set-Cookie'],
+}));
+
+// Enable pre-flight for all routes
+app.options('*', cors());
+
 app.use(morgan(':method :url :status :response-time ms'));
 app.use(express.json());
 app.use(cookieParser());
