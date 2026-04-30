@@ -14,44 +14,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
-
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  process.env.FRONTEND_URL,
-  /\.vercel\.app$/, 
-  /localhost/
-].filter(Boolean);
-
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
-    
-    // Check if origin matches any allowed pattern
-    const isAllowed = allowedOrigins.some(pattern => {
-      if (pattern instanceof RegExp) {
-        return pattern.test(origin);
-      }
-      return pattern === origin;
-    });
-    
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      console.log('Blocked CORS request from:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-API-Version', 'Cookie'],
-  exposedHeaders: ['Set-Cookie'],
-}));
-
-// Handle preflight requests explicitly
-app.options('*', cors());
-
+app.use(cors({ origin: [process.env.FRONTEND_URL || 'http://localhost:3000', /localhost/], credentials: true }));
 app.use(morgan(':method :url :status :response-time ms'));
 app.use(express.json());
 app.use(cookieParser());
