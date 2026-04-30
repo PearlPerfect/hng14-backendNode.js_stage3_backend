@@ -36,7 +36,7 @@ app.use(cors({
 }));
 
 // Enable pre-flight for all routes
-app.options('*', cors());
+// app.options('*', cors());
 
 app.use(morgan(':method :url :status :response-time ms'));
 app.use(express.json());
